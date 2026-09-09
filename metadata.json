@@ -1,0 +1,8 @@
+{
+  "name": "SKILL.md Builder",
+  "description": "Aplikasi pembuat file SKILL.md untuk Gemini Spark",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
