@@ -5,6 +5,7 @@ import { Toasts } from './components/Toasts';
 import { IdeaSection } from './components/IdeaSection';
 import { WorkspaceSection } from './components/WorkspaceSection';
 import { VaultModal } from './components/VaultModal';
+import { ApiKeyModal } from './components/ApiKeyModal';
 
 function AppContent() {
   return (
@@ -15,6 +16,7 @@ function AppContent() {
         <WorkspaceSection />
       </main>
       <VaultModal />
+      <ApiKeyModal />
       <Toasts />
     </div>
   );

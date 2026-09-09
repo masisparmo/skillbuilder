@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ListTree, ChevronRight, MessageSquarePlus, RefreshCw, History, Code, Eye, FileText, Copy, CheckCircle2, Download } from 'lucide-react';
 import { useAppContext } from '../AppContext';
 import { callGemini, validateSkillContent } from '../lib';
+import { hasValidApiKey } from '../apiKeyManager';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from './Toasts';
@@ -9,7 +10,7 @@ import { cn } from './Toasts';
 export const WorkspaceSection = () => {
   const { 
     showWorkspace, currentMarkdown, setCurrentMarkdown, activeSkillName, 
-    history, setHistory, t, showToast, uiLang
+    history, setHistory, t, showToast, uiLang, setIsApiKeyModalOpen
   } = useAppContext();
 
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
@@ -45,9 +46,29 @@ export const WorkspaceSection = () => {
 
   if (!showWorkspace) return null;
 
-  const ARCHITECT_SYSTEM_PROMPT = `You are a Senior AI Skill Architect for Gemini Spark.`; // simplified
+  const ARCHITECT_SYSTEM_PROMPT = `You are a Principal AI Skill Architect maintaining and refining official SKILL.md files for Google Gemini Spark, adhering strictly to Google's official documentation (answer/17094296 and answer/17102773).
+
+OFFICIAL GEMINI SPARK STANDARDS:
+1. YAML FRONTMATTER:
+   - "name": lowercase-kebab-case starting with an action verb (e.g. plan-meal-from-recipe, design-mobile-infographic). NEVER use vague words like helper, tools, data.
+   - "description": Third-person statement under 1024 chars, including a trigger clause starting with "Use when..." (or "Gunakan saat..." / "Gunakan ketika...").
+2. INSTRUCTION PHILOSOPHY: "Cheat sheets, not manuals" - concise, high-density, structured.
+3. MANDATORY SECTIONS:
+   - Role & Core Purpose
+   - Workflow & Step-by-Step Checklist (- [ ] Step 1: ...)
+   - Formatting Rules & Output Template (concrete template with codeblocks/markdown)
+   - Handling Missing Information (ask user for missing parameters instead of assuming)
+   - Common Mistakes to Avoid (clear pitfalls and anti-hallucination constraints)
+
+Maintain all official standards while applying the user's requested revision. Return ONLY the complete updated raw SKILL.md markdown text starting with "---".`;
 
   const handleRevise = async () => {
+    if (!hasValidApiKey()) {
+      setIsApiKeyModalOpen(true);
+      showToast(t('toastApiKeyMissing'), "warning");
+      return;
+    }
+
     if (!revisionInput.trim()) return;
     setIsRevising(true);
     try {

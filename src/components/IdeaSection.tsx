@@ -3,13 +3,15 @@ import { Sparkles, Lightbulb, Cpu, CheckCircle, Loader, Circle, Check } from 'lu
 import { useAppContext } from '../AppContext';
 import { PRESETS } from '../i18n';
 import { callGemini } from '../lib';
+import { hasValidApiKey } from '../apiKeyManager';
 import { cn } from './Toasts';
 
 export const IdeaSection = () => {
   const { 
     idea, setIdea, targetAudience, setTargetAudience, purpose, setPurpose, language, setLanguage,
     t, uiLang, showToast, isGenerating, setIsGenerating, setAnalysis, 
-    setCurrentMarkdown, setHistory, setActiveSkillName, setShowWorkspace, setCurrentSkillId
+    setCurrentMarkdown, setHistory, setActiveSkillName, setShowWorkspace, setCurrentSkillId,
+    setIsApiKeyModalOpen
   } = useAppContext();
 
   const [loadingStep, setLoadingStep] = useState(0);
@@ -26,6 +28,12 @@ export const IdeaSection = () => {
   };
 
   const handleGenerate = async () => {
+    if (!hasValidApiKey()) {
+      setIsApiKeyModalOpen(true);
+      showToast(t('toastApiKeyMissing'), "warning");
+      return;
+    }
+
     if (!idea.trim()) {
       showToast(t('toastEmptyIdea'), "warning");
       return;
@@ -36,11 +44,16 @@ export const IdeaSection = () => {
     setLoadingStep(1);
     
     try {
-      const anaPrompt = `Analyze this Skill idea for Gemini Spark:
+      const anaPrompt = `Analyze this Skill idea according to official Google Gemini Spark guidelines:
 Idea: "${idea}"
 Target Audience: "${targetAudience || 'General users'}"
 Category: "${purpose}"
 Language: "${language}"
+
+Strict Google Gemini Spark Rules:
+1. "name": MUST be lowercase kebab-case starting with an action verb (e.g. plan-meal-from-recipe, design-mobile-infographic, extract-academic-insights). Focus on what the skill does, not what it is. NEVER use vague words like "helper", "tools", or "data".
+2. "description": Must be written in the third person (e.g. "Categorizes recipes, scales portions..."). Must be under 1024 characters. Must include a clear trigger starting with "Use when..." (or "Gunakan ketika..." / "Gunakan saat...").
+
 Extract the architecture plan in JSON format.`;
 
       const schema = {
@@ -55,14 +68,14 @@ Extract the architecture plan in JSON format.`;
         required: ["name", "purpose", "targetUser", "capabilities", "triggerExamples"]
       };
 
-      const jsonStr = await callGemini(anaPrompt, "You are a Skill Architect analyzer.", schema);
+      const jsonStr = await callGemini(anaPrompt, "You are an official Gemini Spark Skill Architect analyzer.", schema);
       const anaResult = JSON.parse(jsonStr);
       setAnalysis(anaResult);
       setActiveSkillName(anaResult.name);
       
       setLoadingStep(2);
       
-      const draftPrompt = `Architect a complete, comprehensive, production-ready SKILL.md file for Gemini Spark based on:
+      const draftPrompt = `Architect a complete, official specification-compliant SKILL.md file for Gemini Spark based on:
 Idea: ${idea}
 Target Audience: ${targetAudience}
 Category: ${purpose}
@@ -71,30 +84,46 @@ Analyzed Name: ${anaResult.name}
 Analyzed Purpose: ${anaResult.purpose}
 Key Capabilities: ${anaResult.capabilities.join(', ')}
 
-Ensure valid YAML frontmatter (name & description) and complete markdown sections. Make it extremely specific and practical. Return ONLY the raw SKILL.md text.`;
+Ensure valid YAML frontmatter (name & description) and complete markdown sections according to Google's official Gemini Spark standards ("cheat sheets, not manuals"). Return ONLY the raw SKILL.md text.`;
 
-      const ARCHITECT_SYSTEM_PROMPT = `You are a Senior AI Skill Architect for Gemini Spark.
-Your mission is to transform a user's idea or workflow requirements into a world-class, production-grade, highly structured SKILL.md file.
+      const ARCHITECT_SYSTEM_PROMPT = `You are a Principal AI Skill Architect creating official SKILL.md files for Google Gemini Spark, adhering strictly to Google's official documentation (answer/17094296 and answer/17102773).
 
-Core Architecture Rules for SKILL.md:
-1. FRONTMATTER: Must begin with valid YAML frontmatter containing:
+OFFICIAL GEMINI SPARK STANDARDS:
+1. YAML FRONTMATTER:
    ---
-   name: <lowercase-kebab-case-name>
-   description: <crisp, high-impact description explaining what the skill does and exact trigger conditions>
+   name: <verb-first-lowercase-kebab-case> (e.g., plan-meal-from-recipe, design-mobile-infographic; focus on action, NEVER use vague words like helper, tools, data)
+   description: <third-person capability statement>. Use when <specific situations and trigger criteria for Gemini Spark to auto-activate in the background>. (Under 1024 chars)
    ---
-2. IDENTITY & ROLE: Define precise persona, domain mastery, and behavioral posture.
-3. PURPOSE & SCOPE: Clear mission statement, what it handles, and out-of-scope boundaries.
-4. INPUT SPECIFICATIONS: Supported formats (text, PDF, video, code, tables), required variables, optional parameters.
-5. WORKFLOW & EXECUTION PIPELINE: Step-by-step sequential reasoning (Step 1, Step 2, etc.).
-6. DECISION RULES & CONSTRAINTS: Uncompromising constraints (e.g., when to ask questions, anti-hallucination rules, mobile-first design, exact formatting requirements).
-7. OUTPUT FORMAT & TEMPLATES: Exact schema/template with markdown headings, tables, or codeblocks.
-8. QUALITY ASSURANCE CHECKLIST: A validation criteria checklist that Gemini Spark must internally evaluate before finalizing its output.
+
+2. INSTRUCTION PHILOSOPHY: "Cheat sheets, not manuals"
+   - Keep instructions concise, punchy, and dense. Teach Gemini how to handle the TYPE of task, not just a one-off result.
+
+3. MANDATORY SECTIONS:
+   # [Skill Title]
+
+   ## 1. Role & Core Purpose
+   Concise definition of persona, domain mastery, and operational boundaries.
+
+   ## 2. Workflow & Step-by-Step Checklist
+   Sequential pipeline formatted with interactive task checkboxes so Gemini can track progress:
+   - [ ] Step 1: [Action name] - [Specific instruction]
+   - [ ] Step 2: [Action name] - [Specific instruction]
+   - [ ] Step 3: [Action name] - [Specific instruction]
+
+   ## 3. Formatting Rules & Output Template
+   Strict markdown template (using codeblocks or clear layout templates) defining the exact expected response format.
+
+   ## 4. Handling Missing Information
+   Explicit rules telling Gemini what to do if input or key information is missing (e.g., stop and ask clarifying questions instead of assuming or making up details).
+
+   ## 5. Common Mistakes to Avoid
+   Dedicated section explicitly warning Gemini about typical pitfalls, prohibited behaviors, and anti-hallucination constraints.
 
 Guidelines:
-- Prefer explicit, unambiguous rules over vague suggestions.
-- Do NOT include extraneous conversational filler before or after the markdown.
-- Do NOT wrap your response in markdown or yaml blocks.
-- Output ONLY the complete, ready-to-use SKILL.md markdown text.`;
+- Output in the requested language (${language}).
+- Do NOT include conversational greetings or explanations before or after.
+- Do NOT wrap in outer markdown codeblocks.
+- Start directly with the frontmatter "---".`;
 
       setLoadingStep(3);
       const draftMarkdown = await callGemini(draftPrompt, ARCHITECT_SYSTEM_PROMPT);

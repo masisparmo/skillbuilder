@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { I18N, STARTER_DEMO, PRESETS } from './i18n';
 import { saveSkillToDB, getAllSkillsFromDB } from './lib';
+import { hasValidApiKey, getApiKeys } from './apiKeyManager';
 
 export const AppContext = createContext<any>(null);
 
@@ -14,7 +15,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [purpose, setPurpose] = useState(STARTER_DEMO.id.purpose);
   const [language, setLanguage] = useState(STARTER_DEMO.id.lang);
   
-  const [activeSkillName, setActiveSkillName] = useState('infographic-designer');
+  const [activeSkillName, setActiveSkillName] = useState('design-mobile-infographics');
   const [currentMarkdown, setCurrentMarkdown] = useState('');
   const [analysis, setAnalysis] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
@@ -23,10 +24,34 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [showWorkspace, setShowWorkspace] = useState(false);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [vaultCount, setVaultCount] = useState(0);
+
+  // BYOK & Multiple API Key States
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [apiKeysCount, setApiKeysCount] = useState(0);
   
   const [toasts, setToasts] = useState<any[]>([]);
 
   const t = (key: string) => I18N[uiLang][key] || key;
+
+  useEffect(() => {
+    // Inisialisasi status API Key
+    const initialKeys = getApiKeys();
+    setApiKeysCount(initialKeys.length);
+
+    // Buka modal secara otomatis jika user belum memiliki API Key
+    if (!hasValidApiKey()) {
+      setIsApiKeyModalOpen(true);
+    }
+
+    const handleMissingKey = () => {
+      setIsApiKeyModalOpen(true);
+    };
+
+    window.addEventListener('gemini_api_key_missing', handleMissingKey);
+    return () => {
+      window.removeEventListener('gemini_api_key_missing', handleMissingKey);
+    };
+  }, []);
   
   useEffect(() => {
     if (theme === 'dark') {
@@ -121,6 +146,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       showWorkspace, setShowWorkspace,
       isVaultOpen, setIsVaultOpen,
       vaultCount, refreshVaultCount,
+      isApiKeyModalOpen, setIsApiKeyModalOpen,
+      apiKeysCount, setApiKeysCount,
       toasts, showToast,
       t
     }}>

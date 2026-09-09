@@ -11,8 +11,17 @@ async function startServer() {
 
   app.post("/api/generate", async (req, res) => {
     try {
-      const { prompt, systemInstruction, schema } = req.body;
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const { prompt, systemInstruction, schema, apiKey: bodyKey } = req.body;
+      const headerKey = req.headers["x-api-key"] as string | undefined;
+      const effectiveApiKey = bodyKey || headerKey || process.env.GEMINI_API_KEY;
+
+      if (!effectiveApiKey || typeof effectiveApiKey !== 'string' || effectiveApiKey.trim().length === 0) {
+        return res.status(400).json({
+          error: "Gemini API Key belum dimasukkan. Silakan masukkan API Key Anda di menu pengaturan."
+        });
+      }
+
+      const ai = new GoogleGenAI({ apiKey: effectiveApiKey.trim() });
       
       const config: any = {};
       if (systemInstruction) config.systemInstruction = { parts: [{ text: systemInstruction }] };
@@ -29,8 +38,9 @@ async function startServer() {
       
       res.json({ text: response.text });
     } catch (error: any) {
-      console.error(error);
-      res.status(500).json({ error: error.message });
+      console.error("Gemini API Error:", error);
+      const errorMessage = error?.message || "Terjadi kesalahan saat memanggil Gemini API.";
+      res.status(500).json({ error: errorMessage });
     }
   });
 
