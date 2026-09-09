@@ -1,6 +1,6 @@
 export const I18N: Record<string, Record<string, string>> = {
   id: {
-    appTitle: "SKILL BUILDER untuk Gemini Spark",
+    appTitle: "SKILL BUILDER",
     appSubtitle: "Aplikasi berbasis AI untuk membuat SKILL.md bagi Gemini Spark",
     savedSkillsBtn: "Skill Vault",
     importBtn: "Import SKILL.md",
@@ -120,7 +120,7 @@ export const I18N: Record<string, Record<string, string>> = {
     toastApiKeyTestedSuccess: "API Key berhasil diuji dan berfungsi dengan baik!"
   },
   en: {
-    appTitle: "SKILL BUILDER for Gemini Spark",
+    appTitle: "SKILL BUILDER",
     appSubtitle: "AI-powered application to create SKILL.md for Gemini Spark",
     savedSkillsBtn: "Skill Vault",
     importBtn: "Import SKILL.md",
